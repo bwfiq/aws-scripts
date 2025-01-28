@@ -1,0 +1,4 @@
+# Ignore temp files. 
+# Only push the scripts and static files needed for functions.
+
+tmp/
