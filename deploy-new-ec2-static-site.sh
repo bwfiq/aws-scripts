@@ -72,7 +72,7 @@ INSTANCE_ID=$(aws ec2 run-instances \
 log "EC2 instance started."
 
 # Wait for the health checks to pass and get the public IP address
-log " Waiting for instance status ok..."
+log "Waiting for instance status ok..."
 aws ec2 wait instance-status-ok --instance-ids "$INSTANCE_ID"
 PUBLIC_IP=$(aws ec2 describe-instances \
                 --instance-ids "$INSTANCE_ID" \
