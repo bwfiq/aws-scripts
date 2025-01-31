@@ -14,6 +14,9 @@ Contains helper functions for the other scripts and the global tag name for crea
 - Deletes all resources with the tag 'automatically-deployed-by-bwfiq-scripts'
 
 *deploy-new-ec2-static-site.sh*
+CLI Arguments:
+- -y or -n skips the confirmation prompt for cleaning up before running the script
+What it does:
 - Generates a new key pair and imports it to AWS
 - Provisions a new security group allowing SSH, HTTP, and HTTPS ingress
 - Provisions a new EC2 instance with the set Params

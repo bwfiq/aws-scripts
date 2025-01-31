@@ -7,13 +7,30 @@ TAG_NAME="automatically-deployed-by-bwfiq-scripts"
 
 # Clean up all EC2 instances with the specified tag
 # First describe-instances to get the instance IDs, then if its not empty, terminate-instances and wait for them to be terminated
+# Only do running instances, as terminated instances are already cleaned up
 log "Terminating all EC2 instances with tag $TAG_NAME..."
 instance_ids=$(aws ec2 describe-instances \
-                    --filters "[{\"Name\":\"tag:$TAG_NAME\",\"Values\":[\"\"]}]" \
+                    --filters "[{\"Name\":\"tag:$TAG_NAME\",\"Values\":[\"\"]}, \
+                                {\"Name\":\"instance-state-name\",\"Values\":[\"running\"] }]" \
                     --query "Reservations[*].Instances[*].InstanceId" \
                     --output text
                 )
 if [ -n "$instance_ids" ]; then
+    # get the associated key pair, SSH in and issue a shutdown command
+    for instance_id in $instance_ids
+    do
+        key_name=$(aws ec2 describe-instances \
+                        --instance-ids $instance_id \
+                        --query "Reservations[*].Instances[*].KeyName" \
+                        --output text
+                    )
+        ssh -i ./tmp/$key_name ec2-user@$(aws ec2 describe-instances \
+                                                    --instance-ids $instance_id \
+                                                    --query "Reservations[*].Instances[*].PublicIpAddress" \
+                                                    --output text
+                                                ) \
+            "sudo shutdown now" > /dev/null
+    done
     aws ec2 terminate-instances --instance-ids $instance_ids > /dev/null
     log "Waiting for instances to be terminated..."
     aws ec2 wait instance-terminated --instance-ids $instance_ids

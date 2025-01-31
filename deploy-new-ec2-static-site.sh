@@ -2,11 +2,18 @@
 
 source ./utils.sh
 
-# Ask if the user wants to clean up resources first
-read -p "Do you want to clean up resources first? (y/n) " -n 1 -r
-echo # move to a new line
-if [[ $REPLY =~ ^[Yy]$ ]]; then
+# Ask if the user wants to clean up resources first (can be given as an argument -y to clean up or -n to not clean up)
+if [ "$1" = "-y" ]; then
     ./clean-up-resources.sh
+elif [ "$1" = "-n" ]; then
+    log "Skipping cleanup of resources."
+else
+    read -p "Do you want to clean up resources first? (y/n): " clean_up
+    if [ "$clean_up" = "y" ]; then
+        ./clean-up-resources.sh
+    else
+        log "Skipping cleanup of resources."
+    fi
 fi
 
 # STATIC PARAMETERS
