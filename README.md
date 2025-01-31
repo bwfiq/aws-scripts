@@ -5,6 +5,14 @@
 - VPC and Subnet configured in AWS
 
 ## Scripts
+*utils.sh*
+Contains helper functions for the other scripts and the global tag name for created resources.
+- log: Logs a message with a timestamp
+- error: Logs an error message with a timestamp
+
+*clean-up-resources.sh*
+- Deletes all resources with the tag 'automatically-deployed-by-bwfiq-scripts'
+
 *deploy-new-ec2-static-site.sh*
 - Generates a new key pair and imports it to AWS
 - Provisions a new security group allowing SSH, HTTP, and HTTPS ingress
@@ -15,7 +23,6 @@
     - Uses [lipanski/docker-static-website](https://github.com/lipanski/docker-static-website) (httpd docker container ~100kB in size)
 - Copies over files in the static-site directory (Dockerfile and HTML)
 - Builds and runs the container
-If the script is ended or errors, the security group, key pair, and instance will be deleted from AWS.
 
 ## To Do
 - Provision a new VPS and subnet
