@@ -60,6 +60,18 @@ do
     aws ec2 delete-key-pair --key-name $key_name > /dev/null
 done
 
+# Clean up all subnets with the specified tag
+# Since delete-subnet only works on one subnet at a time, we need to loop through all subnets
+log "Deleting all subnets with tag $TAG_NAME..."
+for subnet_id in $(aws ec2 describe-subnets \
+                    --filters "[{\"Name\":\"tag:$TAG_NAME\",\"Values\":[\"\"]}]" \
+                    --query "Subnets[*].SubnetId" \
+                    --output text
+                )
+do
+    aws ec2 delete-subnet --subnet-id $subnet_id > /dev/null
+done
+
 # Clean up the ./tmp directory and delete all files under it
 log "Cleaning up ./tmp directory..."
 [ -d ./tmp ] || exit 0

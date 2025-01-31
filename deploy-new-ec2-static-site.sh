@@ -24,20 +24,12 @@ USERNAME="ec2-user" # default for Amazon Linux
 IDENTIFIER=$RANDOM
 STATIC_SITE_DIR="./static-site"
 VPC_ID="vpc-07ef57799012c1cc9"
-SUBNET_ID="subnet-000d0e8794b2fd59f"
+
+# --- LOCAL SETUP --- #
 
 # Create the tmp directory if it does not exist
 mkdir --parents ./tmp \
     || { error "Failed to create the ./tmp directory."; exit 1; }
-
-# Get the first instance type that is free tier eligible
-INSTANCE_TYPE=$(aws ec2 describe-instance-types \
-                    --filters Name=free-tier-eligible,Values=true \
-                    --query 'InstanceTypes[0].InstanceType' \
-                 | xargs
-               )
-[ -z "$INSTANCE_TYPE" ] \
-    && { error "Failed to get free tier eligible instance type.";}
 
 # Generate the key pair and set the permissions so SSH is happy
 log "Generating SSH key pair..."
@@ -49,6 +41,30 @@ ssh-keygen \
     > /dev/null \
     || { error "Failed to generate SSH key."; }
 chmod 600 ./tmp/$IDENTIFIER && chmod 600 ./tmp/$IDENTIFIER.pub
+
+# --- AWS SETUP --- #
+
+# Create a new subnet with provided VPC ID and tag
+log "Creating a new subnet..."
+SUBNET_ID=$(aws ec2 create-subnet \
+                --tag-specifications "ResourceType=subnet,Tags=[{Key=${TAG_NAME},Value=\"\"}]" \
+                --vpc-id "$VPC_ID" \
+                --cidr-block "23.9.2.0/24" \
+                --query 'Subnet.SubnetId' \
+                --output text
+            )
+[ -z "$SUBNET_ID" ] \
+    && { error "Failed to create subnet.";}
+log "Subnet created with ID: $SUBNET_ID"
+
+# Get the first instance type that is free tier eligible
+INSTANCE_TYPE=$(aws ec2 describe-instance-types \
+                    --filters Name=free-tier-eligible,Values=true \
+                    --query 'InstanceTypes[0].InstanceType' \
+                 | xargs
+               )
+[ -z "$INSTANCE_TYPE" ] \
+    && { error "Failed to get free tier eligible instance type.";}
 # Import the key pair to AWS
 log "Importing SSH key pair to AWS..."
 aws ec2 import-key-pair \
@@ -81,6 +97,8 @@ aws ec2 authorize-security-group-ingress \
                      'IpProtocol=tcp,FromPort=80,ToPort=80,IpRanges=[{CidrIp=0.0.0.0/0}]' \
                      'IpProtocol=tcp,FromPort=443,ToPort=443,IpRanges=[{CidrIp=0.0.0.0/0}]' \
 > /dev/null
+
+# --- DEPLOYMENT --- #
 
 # Start the EC2 instance with the given parameters
 INSTANCE_ID=$(aws ec2 run-instances \
