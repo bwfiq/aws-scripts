@@ -16,16 +16,15 @@ else
     fi
 fi
 
-# STATIC PARAMETERS
+# PARAMETERS
 AMI_ID="ami-00ba9561b67b5723f" # Amazon Linux 2
 USERNAME="ec2-user" # default for Amazon Linux
-
-# PARAMETERS
-IDENTIFIER=$RANDOM
 STATIC_SITE_DIR="./static-site"
-VPC_ID="vpc-07ef57799012c1cc9"
 
 # --- LOCAL SETUP --- #
+
+# Generate a random identifier and CIDR block
+IDENTIFIER=$RANDOM
 
 # Create the tmp directory if it does not exist
 mkdir --parents ./tmp \
@@ -44,12 +43,24 @@ chmod 600 ./tmp/$IDENTIFIER && chmod 600 ./tmp/$IDENTIFIER.pub
 
 # --- AWS SETUP --- #
 
+# Create a new VPC with a tag
+log "Creating a new VPC..."
+VPC_ID=$(aws ec2 create-vpc \
+            --tag-specifications "ResourceType=vpc,Tags=[{Key=${TAG_NAME},Value=\"\"}]" \
+            --cidr-block "10.10.0.0/16" \
+            --query 'Vpc.VpcId' \
+            --output text
+        )
+[ -z "$VPC_ID" ] \
+    && { error "Failed to create VPC.";}
+log "VPC created with ID: $VPC_ID"
+
 # Create a new subnet with provided VPC ID and tag
 log "Creating a new subnet..."
 SUBNET_ID=$(aws ec2 create-subnet \
                 --tag-specifications "ResourceType=subnet,Tags=[{Key=${TAG_NAME},Value=\"\"}]" \
                 --vpc-id "$VPC_ID" \
-                --cidr-block "23.9.2.0/24" \
+                --cidr-block "10.10.0.0/24" \
                 --query 'Subnet.SubnetId' \
                 --output text
             )

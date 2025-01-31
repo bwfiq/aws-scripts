@@ -17,20 +17,6 @@ instance_ids=$(aws ec2 describe-instances \
                 )
 if [ -n "$instance_ids" ]; then
     # get the associated key pair, SSH in and issue a shutdown command
-    for instance_id in $instance_ids
-    do
-        key_name=$(aws ec2 describe-instances \
-                        --instance-ids $instance_id \
-                        --query "Reservations[*].Instances[*].KeyName" \
-                        --output text
-                    )
-        ssh -i ./tmp/$key_name ec2-user@$(aws ec2 describe-instances \
-                                                    --instance-ids $instance_id \
-                                                    --query "Reservations[*].Instances[*].PublicIpAddress" \
-                                                    --output text
-                                                ) \
-            "sudo shutdown now" > /dev/null
-    done
     aws ec2 terminate-instances --instance-ids $instance_ids > /dev/null
     log "Waiting for instances to be terminated..."
     aws ec2 wait instance-terminated --instance-ids $instance_ids
@@ -70,6 +56,18 @@ for subnet_id in $(aws ec2 describe-subnets \
                 )
 do
     aws ec2 delete-subnet --subnet-id $subnet_id > /dev/null
+done
+
+# Clean up all VPCs with the specified tag
+# Since delete-vpc only works on one VPC at a time, we need to loop through all VPCs
+log "Deleting all VPCs with tag $TAG_NAME..."
+for vpc_id in $(aws ec2 describe-vpcs \
+                    --filters "[{\"Name\":\"tag:$TAG_NAME\",\"Values\":[\"\"]}]" \
+                    --query "Vpcs[*].VpcId" \
+                    --output text
+                )
+do
+    aws ec2 delete-vpc --vpc-id $vpc_id > /dev/null
 done
 
 # Clean up the ./tmp directory and delete all files under it
